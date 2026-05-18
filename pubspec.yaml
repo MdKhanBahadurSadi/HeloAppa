@@ -1,0 +1,43 @@
+name: helo_appa
+description: A new Flutter project.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_bloc: any
+  equatable: any
+  get_it: any
+  go_router: any
+  firebase_core: any
+  firebase_auth: any
+  cloud_firestore: any
+  firebase_database: any
+  firebase_storage: any
+  firebase_messaging: any
+  flutter_webrtc: any
+  hive_flutter: any
+  image_picker: any
+  cached_network_image: any
+  flutter_local_notifications: any
+  flutter_callkit_incoming: any
+  intl: any
+  uuid: any
+  permission_handler: any
+  google_sign_in: any
+  rxdart: any
+  dio: any
+  googleapis: any
+  googleapis_auth: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: any
+
+flutter:
+  uses-material-design: true

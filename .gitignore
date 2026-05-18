@@ -1,0 +1,96 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate.log
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configurations and tasks for VS Code
+# as well as settings for Python analysis, encoding and more.
+# These should be checked into source control.
+# .vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place executable binaries here
+/android/app/src/main/java/io/flutter/plugins/
+/android/gen/
+/android/out/
+
+# Android graduation
+.gradle/
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
+
+# iOS related
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/temporary_extract
+**/ios/Runner/GeneratedPluginRegistrant.[mh]
+**/ios/Runner/config/
+**/ios/Runner/module.modulemap
+**/ios/Runner/symlinks/
+**/Pods/
+**/ios/.generated/
+**/ios/.last_build_id
+**/ios/.symlinks/
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Flutter.podspec
+**/ios/ServiceDefinitions.json
+**/ios/Runner/Info.plist
+
+# macOS related
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/Generated.xcconfig
+**/macos/Flutter/Flutter-Generated.xcconfig
+**/macos/Runner/GeneratedPluginRegistrant.[mh]
+**/macos/Runner/GeneratedPluginRegistrant.swift
+
+# Linux related
+**/linux/flutter/ephemeral/
+
+# Windows related
+**/windows/flutter/ephemeral/
+
+# Web related
+.dart_tool/chrome-device/
+
+# Exceptions to above rules.
+!**/ios/Runner/Info.plist
+!**/ios/Runner/GeneratedPluginRegistrant.swift
+!**/android/app/src/main/fastlane/
+!**/ios/Runner/fastlane/
+
+# Secret files
+.env
+*secret.json
+google-services.json
+GoogleService-Info.plist
