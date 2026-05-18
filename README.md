@@ -25,7 +25,7 @@ A well-structured Flutter application for Real-time Messaging and WebRTC Video/A
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/heloappa.git
+   git clone https://github.com/mdkhanbahadursadi/heloappa.git
    ```
 2. Install dependencies:
    ```bash
