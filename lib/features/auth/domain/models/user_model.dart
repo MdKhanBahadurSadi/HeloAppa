@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class UserModel extends Equatable {
@@ -19,32 +20,6 @@ class UserModel extends Equatable {
     required this.lastSeen,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'email': email,
-      'photoUrl': photoUrl,
-      'fcmToken': fcmToken,
-      'isOnline': isOnline,
-      'lastSeen': lastSeen.millisecondsSinceEpoch,
-    };
-  }
-
-  factory UserModel.fromMap(Map<String, dynamic> map) {
-    return UserModel(
-      id: map['id'] ?? '',
-      name: map['name'] ?? '',
-      email: map['email'] ?? '',
-      photoUrl: map['photoUrl'],
-      fcmToken: map['fcmToken'],
-      isOnline: map['isOnline'] ?? false,
-      lastSeen: map['lastSeen'] != null 
-          ? DateTime.fromMillisecondsSinceEpoch(map['lastSeen']) 
-          : DateTime.now(),
-    );
-  }
-
   UserModel copyWith({
     String? id,
     String? name,
@@ -65,6 +40,49 @@ class UserModel extends Equatable {
     );
   }
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'photoUrl': photoUrl,
+      'fcmToken': fcmToken,
+      'isOnline': isOnline,
+      'lastSeen': lastSeen.millisecondsSinceEpoch,
+    };
+  }
+
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    DateTime parseLastSeen(dynamic value) {
+      if (value is Timestamp) {
+        return value.toDate();
+      } else if (value is int) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      } else if (value is String) {
+        return DateTime.parse(value);
+      }
+      return DateTime.now();
+    }
+
+    return UserModel(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      email: map['email'] ?? '',
+      photoUrl: map['photoUrl'],
+      fcmToken: map['fcmToken'],
+      isOnline: map['isOnline'] ?? false,
+      lastSeen: parseLastSeen(map['lastSeen']),
+    );
+  }
+
   @override
-  List<Object?> get props => [id, name, email, photoUrl, fcmToken, isOnline, lastSeen];
+  List<Object?> get props => [
+        id,
+        name,
+        email,
+        photoUrl,
+        fcmToken,
+        isOnline,
+        lastSeen,
+      ];
 }

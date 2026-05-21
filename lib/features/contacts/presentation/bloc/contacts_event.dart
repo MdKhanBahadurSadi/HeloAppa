@@ -9,6 +9,7 @@ abstract class ContactsEvent extends Equatable {
 
 class LoadContacts extends ContactsEvent {
   final String currentUserId;
+
   const LoadContacts(this.currentUserId);
 
   @override
@@ -17,6 +18,7 @@ class LoadContacts extends ContactsEvent {
 
 class SearchContacts extends ContactsEvent {
   final String query;
+
   const SearchContacts(this.query);
 
   @override

@@ -1,21 +1,20 @@
-import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-import '../../domain/repositories/auth_repository.dart';
 import '../../../../core/services/presence_service.dart';
-import '../../../../core/utils/error_handler.dart';
+import '../../domain/models/user_model.dart';
+import '../../domain/repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final AuthRepository authRepository;
-  final PresenceService presenceService;
-  StreamSubscription? _authSubscription;
+  final AuthRepository _authRepository;
+  final PresenceService _presenceService;
 
   AuthBloc({
-    required this.authRepository,
-    required this.presenceService,
-  }) : super(AuthInitial()) {
+    required AuthRepository authRepository,
+    required PresenceService presenceService,
+  })  : _authRepository = authRepository,
+        _presenceService = presenceService,
+        super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthLoginRequested>(_onAuthLoginRequested);
     on<AuthRegisterRequested>(_onAuthRegisterRequested);
@@ -27,16 +26,32 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthCheckRequested event,
     Emitter<AuthState> emit,
   ) async {
-    _authSubscription?.cancel();
-    await emit.forEach(
-      authRepository.authStateChanges,
+    // First, check the immediate current user
+    try {
+      final user = await _authRepository.getCurrentUser();
+      if (user != null) {
+        _presenceService.initialize(user.id);
+        emit(AuthAuthenticated(user));
+      } else {
+        emit(AuthUnauthenticated());
+      }
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+
+    // Then listen for future changes
+    await emit.forEach<UserModel?>(
+      _authRepository.authStateChanges,
       onData: (user) {
         if (user != null) {
-          presenceService.initialize(user.id);
+          _presenceService.initialize(user.id);
           return AuthAuthenticated(user);
         } else {
           return AuthUnauthenticated();
         }
+      },
+      onError: (error, stackTrace) {
+        return AuthError(error.toString());
       },
     );
   }
@@ -47,11 +62,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final user = await authRepository.signInWithEmail(event.email, event.password);
-      presenceService.initialize(user.id);
+      final user = await _authRepository.signInWithEmail(
+        event.email,
+        event.password,
+      );
+      _presenceService.initialize(user.id);
       emit(AuthAuthenticated(user));
     } catch (e) {
-      emit(AuthError(ErrorHandler.getMessage(e)));
+      emit(AuthError(e.toString()));
     }
   }
 
@@ -61,15 +79,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final user = await authRepository.signUpWithEmail(
+      final user = await _authRepository.signUpWithEmail(
         event.email,
         event.password,
         event.name,
       );
-      presenceService.initialize(user.id);
+      _presenceService.initialize(user.id);
       emit(AuthAuthenticated(user));
     } catch (e) {
-      emit(AuthError(ErrorHandler.getMessage(e)));
+      emit(AuthError(e.toString()));
     }
   }
 
@@ -79,11 +97,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final user = await authRepository.signInWithGoogle();
-      presenceService.initialize(user.id);
+      final user = await _authRepository.signInWithGoogle();
+      _presenceService.initialize(user.id);
       emit(AuthAuthenticated(user));
     } catch (e) {
-      emit(AuthError(ErrorHandler.getMessage(e)));
+      emit(AuthError(e.toString()));
     }
   }
 
@@ -91,22 +109,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSignOutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    final currentState = state;
-    if (currentState is AuthAuthenticated) {
-      await presenceService.setOffline(currentState.user.id);
-    }
     emit(AuthLoading());
     try {
-      await authRepository.signOut();
+      _presenceService.dispose();
+      await _authRepository.signOut();
       emit(AuthUnauthenticated());
     } catch (e) {
-      emit(AuthError(ErrorHandler.getMessage(e)));
+      emit(AuthError(e.toString()));
     }
   }
 
   @override
   Future<void> close() {
-    _authSubscription?.cancel();
+    _presenceService.dispose();
     return super.close();
   }
 }

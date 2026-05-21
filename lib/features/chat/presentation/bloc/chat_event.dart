@@ -10,6 +10,7 @@ abstract class ChatEvent extends Equatable {
 
 class LoadChats extends ChatEvent {
   final String userId;
+
   const LoadChats(this.userId);
 
   @override
@@ -18,6 +19,7 @@ class LoadChats extends ChatEvent {
 
 class LoadMessages extends ChatEvent {
   final String chatId;
+
   const LoadMessages(this.chatId);
 
   @override

@@ -15,6 +15,7 @@ class ChatLoading extends ChatState {}
 
 class ChatsLoaded extends ChatState {
   final List<ChatModel> chats;
+
   const ChatsLoaded(this.chats);
 
   @override
@@ -23,6 +24,7 @@ class ChatsLoaded extends ChatState {
 
 class MessagesLoaded extends ChatState {
   final List<MessageModel> messages;
+
   const MessagesLoaded(this.messages);
 
   @override
@@ -31,6 +33,7 @@ class MessagesLoaded extends ChatState {
 
 class ChatError extends ChatState {
   final String message;
+
   const ChatError(this.message);
 
   @override

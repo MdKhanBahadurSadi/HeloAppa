@@ -16,6 +16,8 @@ class CallButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -27,14 +29,28 @@ class CallButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withAlpha(80),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: Icon(icon, color: Colors.white, size: 30),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 28,
+            ),
           ),
         ),
         const SizedBox(height: 8),
         Text(
           label,
-          style: const TextStyle(color: Colors.white, fontSize: 12),
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w500,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );

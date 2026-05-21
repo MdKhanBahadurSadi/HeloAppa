@@ -1,30 +1,18 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:helo_appa/main.dart';
+import 'package:heloappa/core/utils/extensions.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('String Extensions Tests', () {
+    test('capitalize() should capitalize first character of a string', () {
+      expect('hello'.capitalize(), 'Hello');
+      expect('world'.capitalize(), 'World');
+      expect(''.capitalize(), '');
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('isValidEmail() should correctly validate email formats', () {
+      expect('test@example.com'.isValidEmail(), true);
+      expect('invalid-email'.isValidEmail(), false);
+      expect('name.surname@domain.co.uk'.isValidEmail(), true);
+    });
   });
 }

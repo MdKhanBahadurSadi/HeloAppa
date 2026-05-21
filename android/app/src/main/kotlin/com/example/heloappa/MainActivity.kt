@@ -1,4 +1,4 @@
-package com.example.helo_appa
+package com.example.heloappa
 
 import io.flutter.embedding.android.FlutterActivity
 

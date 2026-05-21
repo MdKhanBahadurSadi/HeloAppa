@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class ChatModel extends Equatable {
@@ -23,36 +24,6 @@ class ChatModel extends Equatable {
     required this.otherUserIsOnline,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'participants': participants,
-      'lastMessage': lastMessage,
-      'lastMessageTime': lastMessageTime.millisecondsSinceEpoch,
-      'unreadCount': unreadCount,
-      'otherUserId': otherUserId,
-      'otherUserName': otherUserName,
-      'otherUserPhotoUrl': otherUserPhotoUrl,
-      'otherUserIsOnline': otherUserIsOnline,
-    };
-  }
-
-  factory ChatModel.fromMap(Map<String, dynamic> map) {
-    return ChatModel(
-      id: map['id'] ?? '',
-      participants: List<String>.from(map['participants'] ?? []),
-      lastMessage: map['lastMessage'] ?? '',
-      lastMessageTime: map['lastMessageTime'] != null 
-          ? DateTime.fromMillisecondsSinceEpoch(map['lastMessageTime']) 
-          : DateTime.now(),
-      unreadCount: map['unreadCount'] ?? 0,
-      otherUserId: map['otherUserId'] ?? '',
-      otherUserName: map['otherUserName'] ?? '',
-      otherUserPhotoUrl: map['otherUserPhotoUrl'],
-      otherUserIsOnline: map['otherUserIsOnline'] ?? false,
-    );
-  }
-
   ChatModel copyWith({
     String? id,
     List<String>? participants,
@@ -74,6 +45,48 @@ class ChatModel extends Equatable {
       otherUserName: otherUserName ?? this.otherUserName,
       otherUserPhotoUrl: otherUserPhotoUrl ?? this.otherUserPhotoUrl,
       otherUserIsOnline: otherUserIsOnline ?? this.otherUserIsOnline,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'participants': participants,
+      'lastMessage': lastMessage,
+      'lastMessageTime': lastMessageTime.millisecondsSinceEpoch,
+    };
+  }
+
+  factory ChatModel.fromMap(
+    Map<String, dynamic> map, {
+    String? id,
+    String? otherUserId,
+    String? otherUserName,
+    String? otherUserPhotoUrl,
+    bool? otherUserIsOnline,
+    int? unreadCount,
+  }) {
+    DateTime parseTime(dynamic value) {
+      if (value is Timestamp) {
+        return value.toDate();
+      } else if (value is int) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      } else if (value is String) {
+        return DateTime.parse(value);
+      }
+      return DateTime.now();
+    }
+
+    return ChatModel(
+      id: id ?? map['id'] ?? '',
+      participants: List<String>.from(map['participants'] ?? []),
+      lastMessage: map['lastMessage'] ?? '',
+      lastMessageTime: parseTime(map['lastMessageTime']),
+      unreadCount: unreadCount ?? 0,
+      otherUserId: otherUserId ?? '',
+      otherUserName: otherUserName ?? '',
+      otherUserPhotoUrl: otherUserPhotoUrl,
+      otherUserIsOnline: otherUserIsOnline ?? false,
     );
   }
 

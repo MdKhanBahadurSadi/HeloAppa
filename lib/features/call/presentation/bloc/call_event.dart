@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../domain/models/call_model.dart';
+import 'call_state.dart';
 
 abstract class CallEvent extends Equatable {
   const CallEvent();
@@ -12,14 +13,14 @@ abstract class CallEvent extends Equatable {
 class StartCall extends CallEvent {
   final String callerId;
   final String callerName;
-  final String? callerPhoto;
+  final String callerPhoto;
   final String receiverId;
   final bool isVideo;
 
   const StartCall({
     required this.callerId,
     required this.callerName,
-    this.callerPhoto,
+    required this.callerPhoto,
     required this.receiverId,
     required this.isVideo,
   });
@@ -30,6 +31,7 @@ class StartCall extends CallEvent {
 
 class AcceptCall extends CallEvent {
   final CallModel call;
+
   const AcceptCall(this.call);
 
   @override
@@ -38,6 +40,7 @@ class AcceptCall extends CallEvent {
 
 class RejectCall extends CallEvent {
   final String callId;
+
   const RejectCall(this.callId);
 
   @override
@@ -46,6 +49,7 @@ class RejectCall extends CallEvent {
 
 class EndCall extends CallEvent {
   final String callId;
+
   const EndCall(this.callId);
 
   @override
@@ -54,6 +58,7 @@ class EndCall extends CallEvent {
 
 class IceCandidateReceived extends CallEvent {
   final RTCIceCandidate candidate;
+
   const IceCandidateReceived(this.candidate);
 
   @override
@@ -62,18 +67,36 @@ class IceCandidateReceived extends CallEvent {
 
 class RemoteStreamReceived extends CallEvent {
   final MediaStream stream;
+
   const RemoteStreamReceived(this.stream);
 
   @override
   List<Object?> get props => [stream];
 }
 
-class _UpdateIncomingCall extends CallEvent {
-  final CallModel? call;
-  const _UpdateIncomingCall(this.call);
+class ListenForIncomingCalls extends CallEvent {
+  final String userId;
+
+  const ListenForIncomingCalls(this.userId);
+
+  @override
+  List<Object?> get props => [userId];
 }
 
-class _UpdateAnswerReceived extends CallEvent {
-  final Map<String, dynamic> answer;
-  const _UpdateAnswerReceived(this.answer);
+class IncomingCallReceived extends CallEvent {
+  final CallModel call;
+
+  const IncomingCallReceived(this.call);
+
+  @override
+  List<Object?> get props => [call];
+}
+
+class CallStateUpdated extends CallEvent {
+  final CallState state;
+
+  const CallStateUpdated(this.state);
+
+  @override
+  List<Object?> get props => [state];
 }

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class ContactModel extends Equatable {
@@ -15,30 +16,6 @@ class ContactModel extends Equatable {
     required this.lastSeen,
   });
 
-  factory ContactModel.fromMap(Map<String, dynamic> map) {
-    return ContactModel(
-      uid: map['id'] ?? map['uid'] ?? '',
-      name: map['name'] ?? '',
-      photoUrl: map['photoUrl'],
-      isOnline: map['isOnline'] ?? false,
-      lastSeen: map['lastSeen'] != null 
-          ? (map['lastSeen'] is int 
-              ? DateTime.fromMillisecondsSinceEpoch(map['lastSeen']) 
-              : (map['lastSeen'] as Timestamp).toDate())
-          : DateTime.now(),
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'uid': uid,
-      'name': name,
-      'photoUrl': photoUrl,
-      'isOnline': isOnline,
-      'lastSeen': lastSeen.millisecondsSinceEpoch,
-    };
-  }
-
   ContactModel copyWith({
     String? uid,
     String? name,
@@ -55,9 +32,40 @@ class ContactModel extends Equatable {
     );
   }
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': uid, // We can store as 'id' or 'uid', let's supply 'id' as in UserModel
+      'name': name,
+      'photoUrl': photoUrl,
+      'isOnline': isOnline,
+      'lastSeen': lastSeen.millisecondsSinceEpoch,
+    };
+  }
+
+  factory ContactModel.fromMap(Map<String, dynamic> map) {
+    DateTime parseLastSeen(dynamic value) {
+      if (value is Timestamp) {
+        return value.toDate();
+      } else if (value is int) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      } else if (value is String) {
+        return DateTime.parse(value);
+      }
+      return DateTime.now();
+    }
+
+    // Handle both 'id' or 'uid' fields that might come from Firestore
+    final id = map['id'] ?? map['uid'] ?? '';
+
+    return ContactModel(
+      uid: id,
+      name: map['name'] ?? '',
+      photoUrl: map['photoUrl'],
+      isOnline: map['isOnline'] ?? false,
+      lastSeen: parseLastSeen(map['lastSeen']),
+    );
+  }
+
   @override
   List<Object?> get props => [uid, name, photoUrl, isOnline, lastSeen];
 }
-
-// Note: Using Timestamp from cloud_firestore
-import 'package:cloud_firestore/cloud_firestore.dart';

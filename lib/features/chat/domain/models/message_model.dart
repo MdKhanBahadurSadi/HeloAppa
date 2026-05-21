@@ -1,5 +1,5 @@
-import 'package:equatable/equatable.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:equatable/equatable.dart';
 
 enum MessageType { text, image, audio }
 
@@ -24,34 +24,6 @@ class MessageModel extends Equatable {
     this.mediaUrl,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'chatId': chatId,
-      'senderId': senderId,
-      'text': text,
-      'type': type.name,
-      'timestamp': timestamp.millisecondsSinceEpoch,
-      'seenBy': seenBy,
-      'mediaUrl': mediaUrl,
-    };
-  }
-
-  factory MessageModel.fromMap(Map<String, dynamic> map) {
-    return MessageModel(
-      id: map['id'] ?? '',
-      chatId: map['chatId'] ?? '',
-      senderId: map['senderId'] ?? '',
-      text: map['text'] ?? '',
-      type: MessageType.values.byName(map['type'] ?? 'text'),
-      timestamp: map['timestamp'] != null 
-          ? DateTime.fromMillisecondsSinceEpoch(map['timestamp']) 
-          : DateTime.now(),
-      seenBy: List<String>.from(map['seenBy'] ?? []),
-      mediaUrl: map['mediaUrl'],
-    );
-  }
-
   MessageModel copyWith({
     String? id,
     String? chatId,
@@ -74,6 +46,64 @@ class MessageModel extends Equatable {
     );
   }
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'chatId': chatId,
+      'senderId': senderId,
+      'text': text,
+      'type': type.name,
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      'seenBy': seenBy,
+      'mediaUrl': mediaUrl,
+    };
+  }
+
+  factory MessageModel.fromMap(Map<String, dynamic> map) {
+    DateTime parseTimestamp(dynamic value) {
+      if (value is Timestamp) {
+        return value.toDate();
+      } else if (value is int) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      } else if (value is String) {
+        return DateTime.parse(value);
+      }
+      return DateTime.now();
+    }
+
+    MessageType parseType(String? typeStr) {
+      switch (typeStr) {
+        case 'image':
+          return MessageType.image;
+        case 'audio':
+          return MessageType.audio;
+        case 'text':
+        default:
+          return MessageType.text;
+      }
+    }
+
+    return MessageModel(
+      id: map['id'] ?? '',
+      chatId: map['chatId'] ?? '',
+      senderId: map['senderId'] ?? '',
+      text: map['text'] ?? '',
+      type: parseType(map['type']),
+      timestamp: parseTimestamp(map['timestamp']),
+      seenBy: List<String>.from(map['seenBy'] ?? []),
+      mediaUrl: map['mediaUrl'],
+    );
+  }
+
   @override
-  List<Object?> get props => [id, chatId, senderId, text, type, timestamp, seenBy, mediaUrl];
+  List<Object?> get props => [
+        id,
+        chatId,
+        senderId,
+        text,
+        type,
+        timestamp,
+        seenBy,
+        mediaUrl,
+      ];
 }

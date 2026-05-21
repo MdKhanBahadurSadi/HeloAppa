@@ -4,47 +4,84 @@ import '../../domain/models/call_model.dart';
 import '../../domain/repositories/call_repository.dart';
 
 class CallRepositoryImpl implements CallRepository {
-  final FirebaseDatabase _database = FirebaseDatabase.instance;
+  final FirebaseDatabase _db = FirebaseDatabase.instance;
 
   @override
   Future<String> initiateCall(CallModel call) async {
-    await _database.ref('calls/${call.callId}').set(call.toMap());
-    // Also notify receiver of incoming call
-    await _database.ref('users/${call.receiverId}/incomingCall').set(call.toMap());
-    return call.callId;
-  }
+    final callId = call.callId;
+    final callMap = call.toMap();
 
-  @override
-  Future<void> sendOffer(String callId, RTCSessionDescription offer) async {
-    await _database.ref('calls/$callId/offer').set({
-      'sdp': offer.sdp,
-      'type': offer.type,
-    });
+    // 1. Write call session to RTDB calls/{callId}
+    await _db.ref('calls/$callId').set(callMap);
+
+    // 2. Set receiver's incomingCall details so they react
+    await _db.ref('users/${call.receiverId}/incomingCall').set(callMap);
+
+    return callId;
   }
 
   @override
   Future<void> answerCall(String callId, RTCSessionDescription answer) async {
-    await _database.ref('calls/$callId/answer').set({
+    final callRef = _db.ref('calls/$callId');
+
+    // Update status to active
+    await callRef.update({
+      'status': CallStatus.active.name,
+    });
+
+    // Write answer SDP
+    await callRef.child('answer').set({
       'sdp': answer.sdp,
       'type': answer.type,
     });
-    await _database.ref('calls/$callId').update({'status': 'active'});
   }
 
   @override
   Future<void> rejectCall(String callId) async {
-    await _database.ref('calls/$callId').update({'status': 'rejected'});
-    // Optionally clear incoming call on receiver's side
+    final callRef = _db.ref('calls/$callId');
+    final snapshot = await callRef.get();
+
+    if (snapshot.exists) {
+      final data = Map<dynamic, dynamic>.from(snapshot.value as Map);
+      final receiverId = data['receiverId'] as String?;
+
+      // Update call session status to rejected
+      await callRef.update({
+        'status': CallStatus.rejected.name,
+      });
+
+      // Clear incoming call from receiver's path
+      if (receiverId != null) {
+        await _db.ref('users/$receiverId/incomingCall').remove();
+      }
+    }
   }
 
   @override
   Future<void> endCall(String callId) async {
-    await _database.ref('calls/$callId').update({'status': 'ended'});
+    final callRef = _db.ref('calls/$callId');
+    final snapshot = await callRef.get();
+
+    if (snapshot.exists) {
+      final data = Map<dynamic, dynamic>.from(snapshot.value as Map);
+      final receiverId = data['receiverId'] as String?;
+
+      // Update call session status to ended
+      await callRef.update({
+        'status': CallStatus.ended.name,
+      });
+
+      // Clear incoming call from receiver's path
+      if (receiverId != null) {
+        await _db.ref('users/$receiverId/incomingCall').remove();
+      }
+    }
   }
 
   @override
   Future<void> sendIceCandidate(String callId, String senderId, RTCIceCandidate candidate) async {
-    await _database.ref('calls/$callId/candidates/$senderId').push().set({
+    final candidateRef = _db.ref('calls/$callId/candidates/$senderId').push();
+    await candidateRef.set({
       'candidate': candidate.candidate,
       'sdpMid': candidate.sdpMid,
       'sdpMLineIndex': candidate.sdpMLineIndex,
@@ -53,34 +90,53 @@ class CallRepositoryImpl implements CallRepository {
 
   @override
   Stream<CallModel?> listenForIncomingCall(String userId) {
-    return _database.ref('users/$userId/incomingCall').onValue.map((event) {
-      if (event.snapshot.value == null) return null;
-      return CallModel.fromMap(Map<String, dynamic>.from(event.snapshot.value as Map));
-    });
-  }
-
-  @override
-  Stream<Map<String, dynamic>?> listenForOffer(String callId) {
-    return _database.ref('calls/$callId/offer').onValue.map((event) {
-      if (event.snapshot.value == null) return null;
-      return Map<String, dynamic>.from(event.snapshot.value as Map);
+    return _db.ref('users/$userId/incomingCall').onValue.map((event) {
+      final value = event.snapshot.value;
+      if (value != null) {
+        try {
+          final map = Map<String, dynamic>.from(value as Map);
+          return CallModel.fromMap(map);
+        } catch (_) {
+          return null;
+        }
+      }
+      return null;
     });
   }
 
   @override
   Stream<Map<String, dynamic>?> listenForAnswer(String callId) {
-    return _database.ref('calls/$callId/answer').onValue.map((event) {
-      if (event.snapshot.value == null) return null;
-      return Map<String, dynamic>.from(event.snapshot.value as Map);
+    return _db.ref('calls/$callId/answer').onValue.map((event) {
+      final value = event.snapshot.value;
+      if (value != null) {
+        try {
+          return Map<String, dynamic>.from(value as Map);
+        } catch (_) {
+          return null;
+        }
+      }
+      return null;
     });
   }
 
   @override
   Stream<List<Map<String, dynamic>>> listenForIceCandidates(String callId, String senderId) {
-    return _database.ref('calls/$callId/candidates/$senderId').onValue.map((event) {
-      if (event.snapshot.value == null) return [];
-      final data = event.snapshot.value as Map;
-      return data.values.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    return _db.ref('calls/$callId/candidates/$senderId').onValue.map((event) {
+      final value = event.snapshot.value;
+      if (value != null) {
+        final list = <Map<String, dynamic>>[];
+        try {
+          if (value is Map) {
+            value.forEach((key, val) {
+              if (val != null) {
+                list.add(Map<String, dynamic>.from(val as Map));
+              }
+            });
+          }
+        } catch (_) {}
+        return list;
+      }
+      return const [];
     });
   }
 }

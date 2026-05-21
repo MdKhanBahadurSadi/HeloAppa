@@ -13,6 +13,7 @@ class CallIdle extends CallState {}
 
 class CallOutgoing extends CallState {
   final CallModel call;
+
   const CallOutgoing(this.call);
 
   @override
@@ -21,6 +22,7 @@ class CallOutgoing extends CallState {
 
 class CallIncoming extends CallState {
   final CallModel call;
+
   const CallIncoming(this.call);
 
   @override
@@ -32,7 +34,11 @@ class CallActive extends CallState {
   final MediaStream? localStream;
   final MediaStream? remoteStream;
 
-  const CallActive(this.call, this.localStream, this.remoteStream);
+  const CallActive(
+    this.call, {
+    this.localStream,
+    this.remoteStream,
+  });
 
   @override
   List<Object?> get props => [call, localStream, remoteStream];
@@ -42,6 +48,7 @@ class CallEnded extends CallState {}
 
 class CallError extends CallState {
   final String message;
+
   const CallError(this.message);
 
   @override

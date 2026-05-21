@@ -16,7 +16,10 @@ class ContactsLoaded extends ContactsState {
   final List<ContactModel> contacts;
   final List<ContactModel> filtered;
 
-  const ContactsLoaded(this.contacts, this.filtered);
+  const ContactsLoaded({
+    required this.contacts,
+    required this.filtered,
+  });
 
   @override
   List<Object?> get props => [contacts, filtered];
@@ -24,6 +27,7 @@ class ContactsLoaded extends ContactsState {
 
 class ContactsError extends ContactsState {
   final String message;
+
   const ContactsError(this.message);
 
   @override

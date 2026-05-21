@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../domain/models/contact_model.dart';
 import '../../domain/repositories/contacts_repository.dart';
-import '../../../../core/constants/app_constants.dart';
 
 class ContactsRepositoryImpl implements ContactsRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -12,27 +12,29 @@ class ContactsRepositoryImpl implements ContactsRepository {
         .collection(AppConstants.USERS)
         .snapshots()
         .map((snapshot) {
-      final users = snapshot.docs
+      final contacts = snapshot.docs
           .map((doc) => ContactModel.fromMap(doc.data()))
-          .where((user) => user.uid != currentUserId)
+          .where((contact) => contact.uid != currentUserId)
           .toList();
-      
-      // Sort by isOnline desc then name asc
-      users.sort((a, b) {
+
+      // Sort: isOnline desc (online first), then name asc
+      contacts.sort((a, b) {
         if (a.isOnline != b.isOnline) {
           return a.isOnline ? -1 : 1;
         }
-        return a.name.compareTo(b.name);
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
       });
-      
-      return users;
+
+      return contacts;
     });
   }
 
   @override
   Future<ContactModel?> getUserById(String uid) async {
     final doc = await _firestore.collection(AppConstants.USERS).doc(uid).get();
-    if (!doc.exists) return null;
-    return ContactModel.fromMap(doc.data()!);
+    if (doc.exists && doc.data() != null) {
+      return ContactModel.fromMap(doc.data()!);
+    }
+    return null;
   }
 }

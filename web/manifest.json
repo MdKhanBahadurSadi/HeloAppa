@@ -1,6 +1,6 @@
 {
-    "name": "helo_appa",
-    "short_name": "helo_appa",
+    "name": "heloappa",
+    "short_name": "heloappa",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

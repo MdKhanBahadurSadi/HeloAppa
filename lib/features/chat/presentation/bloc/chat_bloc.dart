@@ -1,86 +1,113 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
-
 import '../../domain/models/chat_model.dart';
 import '../../domain/models/message_model.dart';
 import '../../domain/repositories/chat_repository.dart';
-import '../../../../core/utils/error_handler.dart';
 import 'chat_event.dart';
 import 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
-  final ChatRepository chatRepository;
+  final ChatRepository _chatRepository;
+  final Uuid _uuid = const Uuid();
+
   StreamSubscription? _chatsSubscription;
   StreamSubscription? _messagesSubscription;
 
-  ChatBloc({required this.chatRepository}) : super(ChatInitial()) {
+  ChatBloc({required ChatRepository chatRepository})
+      : _chatRepository = chatRepository,
+        super(ChatInitial()) {
     on<LoadChats>(_onLoadChats);
     on<LoadMessages>(_onLoadMessages);
     on<SendTextMessage>(_onSendTextMessage);
     on<SendImageMessage>(_onSendImageMessage);
     on<MarkSeen>(_onMarkSeen);
-    on<_UpdateChats>(_onUpdateChatsInternal);
-    on<_UpdateMessages>(_onUpdateMessagesInternal);
+    on<_UpdateChats>(_onUpdateChats);
+    on<_UpdateMessages>(_onUpdateMessages);
+    on<_EmitError>(_onEmitError);
   }
 
-  Future<void> _onLoadChats(LoadChats event, Emitter<ChatState> emit) async {
+  Future<void> _onLoadChats(
+    LoadChats event,
+    Emitter<ChatState> emit,
+  ) async {
     emit(ChatLoading());
     await _chatsSubscription?.cancel();
-    _chatsSubscription = chatRepository.getUserChats(event.userId).listen(
+    _chatsSubscription = _chatRepository.getUserChats(event.userId).listen(
       (chats) => add(_UpdateChats(chats)),
-      onError: (e) => emit(ChatError(ErrorHandler.getMessage(e))),
+      onError: (error) => add(_EmitError(error.toString())),
     );
   }
 
-  void _onUpdateChatsInternal(_UpdateChats event, Emitter<ChatState> emit) {
-    emit(ChatsLoaded(List<ChatModel>.from(event.chats)));
-  }
-
-  Future<void> _onLoadMessages(LoadMessages event, Emitter<ChatState> emit) async {
+  Future<void> _onLoadMessages(
+    LoadMessages event,
+    Emitter<ChatState> emit,
+  ) async {
     emit(ChatLoading());
     await _messagesSubscription?.cancel();
-    _messagesSubscription = chatRepository.getMessages(event.chatId).listen(
+    _messagesSubscription = _chatRepository.getMessages(event.chatId).listen(
       (messages) => add(_UpdateMessages(messages)),
-      onError: (e) => emit(ChatError(ErrorHandler.getMessage(e))),
+      onError: (error) => add(_EmitError(error.toString())),
     );
   }
 
-  void _onUpdateMessagesInternal(_UpdateMessages event, Emitter<ChatState> emit) {
-    emit(MessagesLoaded(List<MessageModel>.from(event.messages)));
-  }
-
-  Future<void> _onSendTextMessage(SendTextMessage event, Emitter<ChatState> emit) async {
+  Future<void> _onSendTextMessage(
+    SendTextMessage event,
+    Emitter<ChatState> emit,
+  ) async {
     try {
       final message = MessageModel(
-        id: const Uuid().v4(),
+        id: _uuid.v4(),
         chatId: event.chatId,
         senderId: event.senderId,
         text: event.text,
         type: MessageType.text,
         timestamp: DateTime.now(),
         seenBy: [event.senderId],
+        mediaUrl: null,
       );
-      await chatRepository.sendMessage(message);
+      await _chatRepository.sendMessage(message);
     } catch (e) {
-      emit(ChatError(ErrorHandler.getMessage(e)));
+      emit(ChatError(e.toString()));
     }
   }
 
-  Future<void> _onSendImageMessage(SendImageMessage event, Emitter<ChatState> emit) async {
+  Future<void> _onSendImageMessage(
+    SendImageMessage event,
+    Emitter<ChatState> emit,
+  ) async {
     try {
-      await chatRepository.sendImageMessage(event.chatId, event.senderId, event.image);
+      await _chatRepository.sendImageMessage(
+        event.chatId,
+        event.senderId,
+        event.image,
+      );
     } catch (e) {
-      emit(ChatError(ErrorHandler.getMessage(e)));
+      emit(ChatError(e.toString()));
     }
   }
 
-  Future<void> _onMarkSeen(MarkSeen event, Emitter<ChatState> emit) async {
+  Future<void> _onMarkSeen(
+    MarkSeen event,
+    Emitter<ChatState> emit,
+  ) async {
     try {
-      await chatRepository.markMessagesSeen(event.chatId, event.userId);
+      await _chatRepository.markMessagesSeen(event.chatId, event.userId);
     } catch (e) {
-      // Silently fail for seen status
+      emit(ChatError(e.toString()));
     }
+  }
+
+  void _onUpdateChats(_UpdateChats event, Emitter<ChatState> emit) {
+    emit(ChatsLoaded(event.chats));
+  }
+
+  void _onUpdateMessages(_UpdateMessages event, Emitter<ChatState> emit) {
+    emit(MessagesLoaded(event.messages));
+  }
+
+  void _onEmitError(_EmitError event, Emitter<ChatState> emit) {
+    emit(ChatError(event.message));
   }
 
   @override
@@ -91,12 +118,27 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 }
 
+// Internal events to safely emit states from listener streams
 class _UpdateChats extends ChatEvent {
-  final List<dynamic> chats;
+  final List<ChatModel> chats;
   const _UpdateChats(this.chats);
+
+  @override
+  List<Object?> get props => [chats];
 }
 
 class _UpdateMessages extends ChatEvent {
-  final List<dynamic> messages;
+  final List<MessageModel> messages;
   const _UpdateMessages(this.messages);
+
+  @override
+  List<Object?> get props => [messages];
+}
+
+class _EmitError extends ChatEvent {
+  final String message;
+  const _EmitError(this.message);
+
+  @override
+  List<Object?> get props => [message];
 }
