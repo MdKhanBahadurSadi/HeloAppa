@@ -11,6 +11,7 @@ import '../../domain/repositories/call_repository.dart';
 import '../../data/services/webrtc_service.dart';
 import 'call_event.dart';
 import 'call_state.dart';
+import '../../../../main.dart';
 
 class CallBloc extends Bloc<CallEvent, CallState> {
   final CallRepository _callRepository;
@@ -72,13 +73,16 @@ class CallBloc extends Bloc<CallEvent, CallState> {
   ) async {
     try {
       final callId = _uuid.v4();
+      String? receiverFcmToken;
 
-      // Fetch receiver FCM token from Firestore
-      final receiverSnapshot = await FirebaseFirestore.instance
-          .collection('USERS')
-          .doc(event.receiverId)
-          .get();
-      final receiverFcmToken = receiverSnapshot.data()?['fcmToken'] as String?;
+      if (!isMockMode) {
+        // Fetch receiver FCM token from Firestore
+        final receiverSnapshot = await FirebaseFirestore.instance
+            .collection('USERS')
+            .doc(event.receiverId)
+            .get();
+        receiverFcmToken = receiverSnapshot.data()?['fcmToken'] as String?;
+      }
 
       // 1. Initialize WebRTC Service
       _webRTCService = sl<WebRTCService>();
@@ -107,7 +111,7 @@ class CallBloc extends Bloc<CallEvent, CallState> {
       await _callRepository.initiateCall(call);
 
       // Send Call notification to receiver via FCM if token exists
-      if (receiverFcmToken != null && receiverFcmToken.isNotEmpty) {
+      if (!isMockMode && receiverFcmToken != null && receiverFcmToken.isNotEmpty) {
         sl<FcmSenderService>().sendCallNotification(
           receiverFcmToken: receiverFcmToken,
           callerName: event.callerName,
@@ -135,16 +139,18 @@ class CallBloc extends Bloc<CallEvent, CallState> {
       };
 
       // 6. Listen for connection status changes (ended/rejected)
-      await _statusSubscription?.cancel();
-      _statusSubscription = FirebaseDatabase.instance
-          .ref('calls/$callId/status')
-          .onValue
-          .listen((dbEvent) {
-        final status = dbEvent.snapshot.value as String?;
-        if (status == 'ended' || status == 'rejected') {
-          add(EndCall(callId));
-        }
-      });
+      if (!isMockMode) {
+        await _statusSubscription?.cancel();
+        _statusSubscription = FirebaseDatabase.instance
+            .ref('calls/$callId/status')
+            .onValue
+            .listen((dbEvent) {
+          final status = dbEvent.snapshot.value as String?;
+          if (status == 'ended' || status == 'rejected') {
+            add(EndCall(callId));
+          }
+        });
+      }
 
       // 7. Listen for answer SDP from the receiver
       await _answerSubscription?.cancel();
@@ -226,16 +232,18 @@ class CallBloc extends Bloc<CallEvent, CallState> {
       await _callRepository.answerCall(call.callId, answer);
 
       // 6. Listen for connection status changes (ended/rejected)
-      await _statusSubscription?.cancel();
-      _statusSubscription = FirebaseDatabase.instance
-          .ref('calls/${call.callId}/status')
-          .onValue
-          .listen((dbEvent) {
-        final status = dbEvent.snapshot.value as String?;
-        if (status == 'ended' || status == 'rejected') {
-          add(EndCall(call.callId));
-        }
-      });
+      if (!isMockMode) {
+        await _statusSubscription?.cancel();
+        _statusSubscription = FirebaseDatabase.instance
+            .ref('calls/${call.callId}/status')
+            .onValue
+            .listen((dbEvent) {
+          final status = dbEvent.snapshot.value as String?;
+          if (status == 'ended' || status == 'rejected') {
+            add(EndCall(call.callId));
+          }
+        });
+      }
 
       // 7. Listen for caller ICE Candidates
       await _candidatesSubscription?.cancel();

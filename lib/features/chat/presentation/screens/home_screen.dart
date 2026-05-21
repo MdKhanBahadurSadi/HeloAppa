@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -24,9 +25,10 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   StreamSubscription? _incomingCallSub;
+  late AnimationController _animationController;
 
   final List<Widget> _tabs = [
     const ChatListScreen(),
@@ -37,6 +39,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..forward();
+
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       final currentUserId = authState.user.id;
@@ -66,18 +73,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _incomingCallSub?.cancel();
+    _animationController.dispose();
     super.dispose();
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (_selectedIndex != index) {
+      setState(() {
+        _selectedIndex = index;
+      });
+      _animationController.reset();
+      _animationController.forward();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final authState = context.watch<AuthBloc>().state;
 
     String? photoUrl;
@@ -88,51 +101,68 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _selectedIndex == 0
-              ? 'Chats'
-              : (_selectedIndex == 1 ? 'Contacts' : 'Settings'),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: CircleAvatar(
-            backgroundColor: AppTheme.primaryColor.withAlpha(40),
-            child: photoUrl != null && photoUrl.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: CachedNetworkImage(
-                      imageUrl: photoUrl,
-                      placeholder: (context, url) => const CircularProgressIndicator(),
-                      errorWidget: (context, url, error) => Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
+      extendBody: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(70),
+        child: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: AppBar(
+              toolbarHeight: 70,
+              centerTitle: false,
+              title: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  _selectedIndex == 0
+                      ? 'Messages'
+                      : (_selectedIndex == 1 ? 'Contacts' : 'Settings'),
+                  key: ValueKey(_selectedIndex),
+                  style: theme.appBarTheme.titleTextStyle,
+                ),
+              ),
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 20.0),
+                child: Center(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: AppTheme.premiumShadow(color: AppTheme.primaryColor),
                     ),
-                  )
-                : Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                      child: photoUrl != null && photoUrl.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(22),
+                              child: CachedNetworkImage(
+                                imageUrl: photoUrl,
+                                placeholder: (context, url) => const CircularProgressIndicator(strokeWidth: 2),
+                                errorWidget: (context, url, error) => _buildInitials(name),
+                              ),
+                            )
+                          : _buildInitials(name),
                     ),
                   ),
+                ),
+              ),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.logout_rounded,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                    onPressed: () {
+                      context.read<AuthBloc>().add(AuthSignOutRequested());
+                      context.go('/login');
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Sign Out',
-            onPressed: () {
-              context.read<AuthBloc>().add(AuthSignOutRequested());
-              context.go('/login');
-            },
-          ),
-        ],
       ),
       body: BlocListener<CallBloc, CallState>(
         listener: (context, state) {
@@ -149,43 +179,99 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
         },
-        child: _tabs[_selectedIndex],
+        child: FadeTransition(
+          opacity: _animationController,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.05),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: _animationController,
+              curve: Curves.easeOutCubic,
+            )),
+            child: _tabs[_selectedIndex],
+          ),
+        ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        selectedItemColor: AppTheme.primaryColor,
-        unselectedItemColor: theme.colorScheme.onSurfaceVariant,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline_rounded),
-            activeIcon: Icon(Icons.chat_bubble_rounded),
-            label: 'Chats',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.contacts_outlined),
-            activeIcon: Icon(Icons.contacts_rounded),
-            label: 'Contacts',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            activeIcon: Icon(Icons.settings_rounded),
-            label: 'Settings',
-          ),
-        ],
-      ),
+      bottomNavigationBar: _buildBottomNav(context, isDark),
       floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton(
-              onPressed: () {
-                setState(() {
-                  _selectedIndex = 1; // Direct user to Contacts tab to start a chat
-                });
-              },
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-              child: const Icon(Icons.message_rounded),
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 90.0),
+              child: FloatingActionButton(
+                onPressed: () => _onItemTapped(1),
+                child: const Icon(Icons.add_rounded, size: 32),
+              ),
             )
           : null,
+    );
+  }
+
+  Widget _buildInitials(String name) {
+    return Text(
+      name.isNotEmpty ? name[0].toUpperCase() : '?',
+      style: const TextStyle(
+        fontWeight: FontWeight.w900,
+        color: AppTheme.primaryColor,
+        fontSize: 18,
+      ),
+    );
+  }
+
+  Widget _buildBottomNav(BuildContext context, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 30),
+      height: 70,
+      child: GlassContainer(
+        borderRadius: 35,
+        blur: 20,
+        opacity: isDark ? 0.08 : 0.05,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(0, Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chats'),
+            _buildNavItem(1, Icons.contacts_outlined, Icons.contacts_rounded, 'Contacts'),
+            _buildNavItem(2, Icons.settings_outlined, Icons.settings_rounded, 'Settings'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label) {
+    final isSelected = _selectedIndex == index;
+    final color = isSelected ? AppTheme.primaryColor : (Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54);
+
+    return InkWell(
+      onTap: () => _onItemTapped(index),
+      borderRadius: BorderRadius.circular(35),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              color: color,
+              size: isSelected ? 28 : 24,
+            ),
+            if (isSelected)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                height: 4,
+                width: 4,
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

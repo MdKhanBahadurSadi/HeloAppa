@@ -18,8 +18,16 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Dispatch AuthCheckRequested on initialization
-    context.read<AuthBloc>().add(AuthCheckRequested());
+    _startAuthCheck();
+  }
+
+  Future<void> _startAuthCheck() async {
+    // Wait for 5 seconds as requested
+    await Future.delayed(const Duration(seconds: 5));
+    if (mounted) {
+      // Trigger authentication check
+      context.read<AuthBloc>().add(AuthCheckRequested());
+    }
   }
 
   @override
@@ -55,8 +63,11 @@ class _SplashScreenState extends State<SplashScreen> {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white30, width: 2),
                   ),
-                  child: const FlutterLogo(
-                    size: 80,
+                  child: Image.asset(
+                    'assets/images/splash.png',
+                    width: 100,
+                    height: 100,
+                    errorBuilder: (context, error, stackTrace) => const FlutterLogo(size: 80),
                   ),
                 ),
                 const SizedBox(height: 24),

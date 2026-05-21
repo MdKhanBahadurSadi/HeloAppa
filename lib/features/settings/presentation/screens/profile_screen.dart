@@ -9,6 +9,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
+import '../../../../main.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -67,6 +68,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final authBloc = context.read<AuthBloc>();
+
+    if (isMockMode) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully! (Mock Mode)')),
+      );
+      navigator.pop();
+      return;
+    }
 
     setState(() {
       _isLoading = true;

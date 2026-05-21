@@ -17,107 +17,107 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final timeStr = DateFormat('hh:mm a').format(message.timestamp);
     final hasBeenSeen = message.seenBy.length > 1;
 
-    return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        decoration: BoxDecoration(
-          color: isMine
-              ? AppTheme.primaryColor
-              : (theme.brightness == Brightness.dark
-                  ? const Color(0xFF27272A)
-                  : const Color(0xFFF4F4F5)),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMine ? 16 : 4),
-            bottomRight: Radius.circular(isMine ? 4 : 16),
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Align(
+        alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (message.type == MessageType.text)
-              Padding(
-                padding: const EdgeInsets.only(right: 4, bottom: 4),
-                child: Text(
-                  message.text,
-                  style: TextStyle(
-                    color: isMine
-                        ? Colors.white
-                        : theme.colorScheme.onSurface,
-                    fontSize: 15,
-                  ),
+            Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
+              ),
+              decoration: BoxDecoration(
+                gradient: isMine
+                    ? const LinearGradient(
+                        colors: [AppTheme.primaryColor, Color(0xFF8B5CF6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: !isMine
+                    ? (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9))
+                    : null,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(isMine ? 20 : 4),
+                  bottomRight: Radius.circular(isMine ? 4 : 20),
                 ),
-              )
-            else if (message.type == MessageType.image && message.mediaUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(
-                  imageUrl: message.mediaUrl!,
-                  placeholder: (context, url) => Container(
-                    height: 200,
-                    width: 200,
-                    color: Colors.black12,
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => const Icon(
-                    Icons.error_outline_rounded,
-                    size: 40,
-                  ),
-                  fit: BoxFit.cover,
-                ),
-              )
-            else if (message.type == MessageType.audio)
-              Row(
+                boxShadow: isMine
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        )
+                      ]
+                    : null,
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.audiotrack_rounded,
-                    color: isMine ? Colors.white : AppTheme.primaryColor,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Audio Message',
-                    style: TextStyle(
-                      color: isMine ? Colors.white : theme.colorScheme.onSurface,
-                      fontStyle: FontStyle.italic,
+                  if (message.type == MessageType.text)
+                    Text(
+                      message.text,
+                      style: TextStyle(
+                        color: isMine ? Colors.white : theme.colorScheme.onSurface,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
+                    )
+                  else if (message.type == MessageType.image && message.mediaUrl != null)
+                    GestureDetector(
+                      onTap: () {
+                        // Image Preview could be added here
+                      },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: CachedNetworkImage(
+                          imageUrl: message.mediaUrl!,
+                          placeholder: (context, url) => Container(
+                            height: 200,
+                            width: 200,
+                            color: isDark ? Colors.white10 : Colors.black12,
+                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          ),
+                          errorWidget: (context, url, error) => const Icon(Icons.error_outline_rounded),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        timeStr,
+                        style: TextStyle(
+                          color: isMine ? Colors.white70 : theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (isMine) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          hasBeenSeen ? Icons.done_all_rounded : Icons.done_rounded,
+                          size: 14,
+                          color: hasBeenSeen ? Colors.white : Colors.white54,
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  timeStr,
-                  style: TextStyle(
-                    color: isMine ? Colors.white70 : Colors.black38,
-                    fontSize: 10,
-                  ),
-                ),
-                if (isMine) ...[
-                  const SizedBox(width: 4),
-                  Icon(
-                    hasBeenSeen ? Icons.done_all : Icons.done,
-                    size: 14,
-                    color: hasBeenSeen
-                        ? (isMine ? Colors.white : AppTheme.primaryColor)
-                        : (isMine ? Colors.white54 : Colors.grey),
-                  ),
-                ],
-              ],
             ),
           ],
         ),

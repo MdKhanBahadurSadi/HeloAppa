@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../constants/app_constants.dart';
+import '../../main.dart';
 
 class PresenceService {
   StreamSubscription<DatabaseEvent>? _connectedSubscription;
@@ -9,6 +10,7 @@ class PresenceService {
   String? _currentUserId;
 
   void initialize(String userId) {
+    if (isMockMode) return;
     if (_currentUserId == userId) return; // Already initialized for this user
     dispose(); // Clean up any previous listeners
     
@@ -33,7 +35,7 @@ class PresenceService {
             'lastSeen': lastSeenTimestamp,
           });
         } catch (e) {
-          // Silently handle if update fails (e.g. document does not exist yet)
+          // Silently handle if update fails
         }
       }
     });
@@ -42,13 +44,11 @@ class PresenceService {
     _connectedSubscription = connectedRef.onValue.listen((event) async {
       final connected = event.snapshot.value as bool? ?? false;
       if (connected) {
-        // Configure onDisconnect hook
         await presenceRef.onDisconnect().set({
           'isOnline': false,
           'lastSeen': ServerValue.timestamp,
         });
 
-        // Set online status in RTDB
         await presenceRef.set({
           'isOnline': true,
           'lastSeen': ServerValue.timestamp,
@@ -58,6 +58,7 @@ class PresenceService {
   }
 
   void dispose() {
+    if (isMockMode) return;
     _connectedSubscription?.cancel();
     _presenceSubscription?.cancel();
     _connectedSubscription = null;
@@ -65,10 +66,10 @@ class PresenceService {
     
     final userId = _currentUserId;
     if (userId != null) {
-      final database = FirebaseDatabase.instance;
-      final firestore = FirebaseFirestore.instance;
-      
       try {
+        final database = FirebaseDatabase.instance;
+        final firestore = FirebaseFirestore.instance;
+
         database.ref("users/$userId/presence").set({
           'isOnline': false,
           'lastSeen': ServerValue.timestamp,
